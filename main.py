@@ -1,16 +1,33 @@
-# This is a sample Python script.
+import random
+import matplotlib
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from algorithm.gsea import GSEAAlgorithm
+from algorithm.significance import t_test
+from data.loader import GeneExpressionDataSetLoader, LocalCachingGSEDownloader
+from data.model import Gene
+import matplotlib.pyplot as plt
 
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    for dataset in [
+        # "GSE22873",
+        # "GSE6030",
+        # ("GSE29048", "Gene Symbol", "genotype"),
+        # "GSE70302",
+        # "GSE70302",
+        # "GSE58120",
+        # "GSE46211",
+        # "GSE49166",
+        # "GSE50933",
+        # "GSE62999",
+        # ("GSE57917", "Gene Symbol", "onecut genotype"),
+        ("GSE68571", "Gene Symbol", "disease_state")
+    ]:
+        loader = GeneExpressionDataSetLoader(LocalCachingGSEDownloader())
+        dataset = loader.load_dataset(*dataset)
+        query = {
+            Gene(gene) for gene in
+            (dataset.samples.get(next(iter(dataset.samples.keys()))).expression_levels.index.values) if
+            ("hsp" in gene.lower())
+        }
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+        de = GSEAAlgorithm(query_gene_set=query).find_differently_expressed(dataset)
