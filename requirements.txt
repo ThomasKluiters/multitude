@@ -1,5 +1,4 @@
 requests
 lxml
 pandas
-scipy
 matplotlib==3.5.0

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -11,9 +12,9 @@ from data.model import GeneSet, GeneExpressionSeries
 class GSEAAlgorithm(NonTBAlgorithm):
     query_gene_set: GeneSet
 
-    permutations: int = 1000
+    permutations: int = 10
 
-    def compute_distribution(self, gene_expression_series: GeneExpressionSeries):
+    def compute_distribution(self, gene_expression_series: GeneExpressionSeries) -> Tuple[pd.Series, np.ndarray]:
         gene_expression_data = gene_expression_series.matrix()
         ndarray = gene_expression_data.to_numpy().T.copy()
         (samples, genes) = ndarray.shape
@@ -33,21 +34,17 @@ class GSEAAlgorithm(NonTBAlgorithm):
             a_std = np.std(a, axis=0)
             b_std = np.std(b, axis=0)
 
-            scores[:, i] = (a_mean - b_mean) / np.sqrt((a_std ** 2) / a_samples) + ((b_std ** 2) / b_samples)
+            scores[:, i] = np.abs((a_mean - b_mean) / np.sqrt((a_std ** 2) / a_samples) + ((b_std ** 2) / b_samples))
 
             if i != (self.permutations - 1):
                 np.random.shuffle(ndarray)
                 pass
-        return pd.Series(scores[:, 1], index=gene_expression_data.index), pd.DataFrame(scores[:, 1:], index=gene_expression_data.index)
+        return pd.Series(scores[:, 1], index=gene_expression_data.index), scores
 
     def find_differently_expressed(self, gene_expression_series: GeneExpressionSeries):
         rankings, permutations = self.compute_distribution(gene_expression_series)
-        query = list(map(str, self.query_gene_set))
-        # rankings = t_test(gene_expression_series)
-        #
-        # query_genes = [gene.name for gene in self.query_gene_set]
-        # series = rankings["statistic"].loc[query_genes].rename("Hit")
-        # annotated_rankings = rankings.join(series).fillna(-1 / len(self.query_gene_set)).sort_values('statistic',
-        #                                                                                              ascending=False)
-        #
-        # return annotated_rankings["Hit"].cumsum()
+
+        for _ in range(1):
+            query = list(map(str, self.query_gene_set))
+            gene_indices = np.array(rankings.index.isin(query), dtype=bool)
+            scores = np.where(np.tile(gene_indices, (self.permutations, 1)).T, permutations, 1 / rankings.size)
